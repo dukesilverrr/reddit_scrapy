@@ -21,8 +21,11 @@ def main():
     links = []
     for link in text:
         idx = link.find("\n\n")
-        if idx != -1 and "http" in link:
-            links.append(link[:idx])
+        if "http" in link:
+            if idx != -1:
+                links.append(link[:idx])
+            else:
+                links.append(link) # cover "last" case with no newlines
 
     print(f"Found {len(links)} links, beginning downloads")
 
