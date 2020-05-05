@@ -14,18 +14,26 @@ def main():
 
     # Both the author's submission and first comment contain the links to the hosting site
     submission = reddit.submission(reddit_subid)
-    text = submission.selftext + submission.comments[0].body
+    text = submission.selftext + "\t" + submission.comments[0].body
     text = text.split("\t")
     print(f"Scraping {reddit_url}...")
 
     links = []
-    for link in text:
-        idx = link.find("\n\n")
-        if "http" in link:
-            if idx != -1:
-                links.append(link[:idx])
-            else:
-                links.append(link) # cover "last" case with no newlines
+    for i,line in enumerate(text):
+        idx = line.find("\n\n")
+        if idx != -1:
+            link = None
+            pre = line[:idx]
+            post = line[(idx+2):]
+            if "http" in pre:
+                link = pre
+            elif "http" in post:
+                link = post
+            if link is not None:
+                links.append(link)
+        else:
+            if "http" in line:
+                links.append(line) # cover "last" case with no newlines
 
     print(f"Found {len(links)} links, beginning downloads")
 
@@ -37,16 +45,20 @@ def main():
         title = soup.h1.get_text()
         title = title.replace("/","_") # replace chars that can mess with file path lookup
 
-        locale = ''
+        locale = None
         for l in soup.findAll('a', attrs={'href': re.compile("pdf")}):
-            # accept first -- may require page-specific modification
+            # accept first pdf link with blue button -- may require page-specific modification
             # depending on which pdf download link we are targeting
-            locale = l.get('href')
-            break
+            if "blue" in ' '.join(l.get('class')):
+                locale = l.get('href')
+                break
+
+        if locale is None:
+            print(f"Skipping {title}: no download link available!")
+            continue
 
         pdf = "https://link.springer.com" + locale
-        print(f"Downloading {i+1} ({title}) ==> {pdf}")
-        print(f"...")
+        print(f"Downloading {i+1} ({title}) ==> {pdf} ...")
 
         try:
             book_file = '/tmp/' + title + '.pdf'
